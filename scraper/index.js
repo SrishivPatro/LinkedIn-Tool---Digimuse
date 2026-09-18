@@ -1,10 +1,10 @@
 const { ApifyClient } = require('apify-client');
 
 const DEFAULT_ACTOR_ID = 'apimaestro/linkedin-profile-detail';
-// UNVERIFIED: no confirmed actor exists yet for LinkedIn post/content search.
-// This id and input shape are a best guess pending a live validation run;
-// override with APIFY_LINKEDIN_SEARCH_ACTOR_ID once a working actor is confirmed.
-const DEFAULT_SEARCH_ACTOR_ID = 'apimaestro/linkedin-post-search-scraper';
+// UNVERIFIED: found via web search (same publisher as the validated profile
+// actor), but its exact input/output schema hasn't been confirmed by a live
+// run yet. Override with APIFY_LINKEDIN_SEARCH_ACTOR_ID if it turns out wrong.
+const DEFAULT_SEARCH_ACTOR_ID = 'apimaestro/linkedin-posts-search-scraper-no-cookies';
 
 function extractUsername(profileUrl) {
   const match = String(profileUrl).match(/linkedin\.com\/in\/([^/?#]+)/i);
@@ -57,12 +57,13 @@ async function scrapeProfiles(profileUrls) {
 }
 
 function normalizePost(item) {
+  const author = item.author || {};
   return {
-    postText: item.text || item.postText || item.content || item.commentary || '',
-    profileUrl: item.authorProfileUrl || item.profileUrl || item.authorUrl
-      || (item.author && item.author.profileUrl) || '',
-    authorName: item.authorName || (item.author && item.author.name) || '',
-    postUrl: item.postUrl || item.url || item.link || '',
+    postText: item.content || item.text || item.postText || item.commentary || '',
+    profileUrl: item.authorProfileUrl || author.linkedinUrl || author.profileUrl
+      || item.profileUrl || item.authorUrl || '',
+    authorName: item.authorName || author.name || '',
+    postUrl: item.postUrl || item.linkedinUrl || item.url || item.link || '',
   };
 }
 
@@ -70,7 +71,7 @@ async function runSearchActor(query) {
   const client = new ApifyClient({ token: process.env.APIFY_TOKEN });
   const actorId = process.env.APIFY_LINKEDIN_SEARCH_ACTOR_ID || DEFAULT_SEARCH_ACTOR_ID;
 
-  const run = await client.actor(actorId).call({ query, maxItems: 20 });
+  const run = await client.actor(actorId).call({ keywords: [query] });
   const { items } = await client.dataset(run.defaultDatasetId).listItems();
 
   console.log(`[debug] Search actor "${actorId}" query "${query}" -> status: ${run.status}, items: ${items.length}`);
