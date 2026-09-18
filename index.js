@@ -5,6 +5,7 @@ const { scoreProfiles } = require('./scoring');
 const { pushLeads, getExistingProfileUrls } = require('./sheets');
 
 const DEFAULT_COMPANY_NEWS_KEYWORDS = ['funding', 'series funding', 'hiring surge', "we're hiring"];
+const DEFAULT_MAX_NEW_PROFILES_PER_RUN = 10;
 
 function parseList(envVar, fallback = []) {
   const raw = process.env[envVar];
@@ -49,15 +50,21 @@ async function main() {
   const existingUrls = await getExistingProfileUrls();
   const existingKeys = new Set(Array.from(existingUrls).map(normalizeProfileKey));
 
-  const newUrls = candidateUrls.filter((url) => !existingKeys.has(normalizeProfileKey(url)));
-  const skipped = candidateUrls.length - newUrls.length;
+  const unseenUrls = candidateUrls.filter((url) => !existingKeys.has(normalizeProfileKey(url)));
+  const skipped = candidateUrls.length - unseenUrls.length;
   if (skipped > 0) {
     console.log(`Skipping ${skipped} profile(s) already in the sheet.`);
   }
 
-  if (newUrls.length === 0) {
+  if (unseenUrls.length === 0) {
     console.log('No new profiles to process.');
     return;
+  }
+
+  const maxNewProfiles = Number(process.env.MAX_NEW_PROFILES_PER_RUN) || DEFAULT_MAX_NEW_PROFILES_PER_RUN;
+  const newUrls = unseenUrls.slice(0, maxNewProfiles);
+  if (unseenUrls.length > newUrls.length) {
+    console.log(`Capping this run to ${newUrls.length} of ${unseenUrls.length} new profile(s) (MAX_NEW_PROFILES_PER_RUN=${maxNewProfiles}). The rest will be picked up on a future run.`);
   }
 
   console.log(`Scraping ${newUrls.length} LinkedIn profile(s)...`);
