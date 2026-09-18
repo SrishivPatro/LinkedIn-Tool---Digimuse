@@ -59,11 +59,10 @@ async function scrapeProfiles(profileUrls) {
 function normalizePost(item) {
   const author = item.author || {};
   return {
-    postText: item.content || item.text || item.postText || item.commentary || '',
-    profileUrl: item.authorProfileUrl || author.linkedinUrl || author.profileUrl
-      || item.profileUrl || item.authorUrl || '',
-    authorName: item.authorName || author.name || '',
-    postUrl: item.postUrl || item.linkedinUrl || item.url || item.link || '',
+    postText: item.text || '',
+    profileUrl: author.profile_url || '',
+    authorName: author.name || '',
+    postUrl: item.post_url || '',
   };
 }
 
@@ -71,7 +70,7 @@ async function runSearchActor(query) {
   const client = new ApifyClient({ token: process.env.APIFY_TOKEN });
   const actorId = process.env.APIFY_LINKEDIN_SEARCH_ACTOR_ID || DEFAULT_SEARCH_ACTOR_ID;
 
-  const run = await client.actor(actorId).call({ keywords: [query] });
+  const run = await client.actor(actorId).call({ search_input: query });
   const { items } = await client.dataset(run.defaultDatasetId).listItems();
 
   console.log(`[debug] Search actor "${actorId}" query "${query}" -> status: ${run.status}, items: ${items.length}`);
