@@ -23,6 +23,7 @@ jobs:
       - name: Run pipeline
         env:
           APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+          LINKEDIN_PROFILE_URLS: ${{ secrets.LINKEDIN_PROFILE_URLS }}
           GOOGLE_SHEETS_SPREADSHEET_ID: ${{ secrets.GOOGLE_SHEETS_SPREADSHEET_ID }}
           GOOGLE_SHEETS_CLIENT_EMAIL: ${{ secrets.GOOGLE_SHEETS_CLIENT_EMAIL }}
           GOOGLE_SHEETS_PRIVATE_KEY: ${{ secrets.GOOGLE_SHEETS_PRIVATE_KEY }}
