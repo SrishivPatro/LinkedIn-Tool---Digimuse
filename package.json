@@ -17,6 +17,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.68.0",
     "apify-client": "^2.9.3",
     "dotenv": "^16.4.5",
     "google-auth-library": "^9.14.1",

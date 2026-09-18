@@ -2,6 +2,7 @@ require('dotenv').config();
 
 const { scrapeProfiles, searchIntentPosts, searchCompanyNews } = require('./scraper');
 const { scoreProfiles } = require('./scoring');
+const { generateConnectionMessages } = require('./enrichment');
 const { pushLeads, getExistingProfileUrls } = require('./sheets');
 
 const DEFAULT_COMPANY_NEWS_KEYWORDS = ['funding', 'series funding', 'hiring surge', "we're hiring"];
@@ -121,8 +122,11 @@ async function main() {
   console.log('Scoring profiles...');
   const scoredLeads = scoreProfiles(profilesWithSignals);
 
+  console.log('Generating personalized connection messages...');
+  const leadsWithMessages = await generateConnectionMessages(scoredLeads);
+
   console.log('Writing scored leads to Google Sheet...');
-  const rowCount = await pushLeads(scoredLeads);
+  const rowCount = await pushLeads(leadsWithMessages);
 
   console.log(`Done. Wrote ${rowCount} row(s) to the sheet.`);
 }

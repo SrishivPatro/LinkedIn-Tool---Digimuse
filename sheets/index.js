@@ -7,6 +7,7 @@ const SHEET_HEADERS = [
   'Name', 'Title', 'Company', 'Location', 'LinkedIn URL',
   'Source Post', 'Post URL', "What's Needed",
   'Agency Need Score', 'Urgency Score', 'Potential Score', 'Chances Score', 'Signal Level',
+  'Connection Message',
   'Scraped At',
 ];
 const SERVICE_ACCOUNT_KEY_PATH = path.join(__dirname, '..', 'credentials', 'google-service-account.json');
@@ -102,6 +103,7 @@ async function pushLeads(scoredLeads) {
       'Potential Score': lead.potentialScore,
       'Chances Score': lead.chancesScore,
       'Signal Level': lead.signalLevel,
+      'Connection Message': lead.connectionMessage || '',
       'Scraped At': new Date().toISOString(),
     };
   });
