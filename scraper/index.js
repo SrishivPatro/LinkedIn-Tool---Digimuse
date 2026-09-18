@@ -27,6 +27,9 @@ async function scrapeProfiles(profileUrls) {
   const run = await client.actor(actorId).call({ profileUrls });
   const { items } = await client.dataset(run.defaultDatasetId).listItems();
 
+  console.log(`[debug] Apify run status: ${run.status}, dataset item count: ${items.length}`);
+  console.log('[debug] Raw Apify dataset items:', JSON.stringify(items, null, 2));
+
   return items.map(normalizeProfile);
 }
 
