@@ -58,11 +58,13 @@ async function scrapeProfiles(profileUrls) {
 
 function normalizePost(item) {
   const author = item.author || {};
+  const postedAt = item.posted_at || {};
   return {
     postText: item.text || '',
     profileUrl: author.profile_url || '',
     authorName: author.name || '',
     postUrl: item.post_url || '',
+    postedAtTimestamp: Number(postedAt.timestamp) || null,
   };
 }
 

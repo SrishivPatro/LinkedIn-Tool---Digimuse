@@ -18,12 +18,17 @@ function normalizeProfileKey(url) {
   return (match ? match[1] : String(url)).toLowerCase();
 }
 
+function isIndianLocation(location) {
+  return /india/i.test(location || '');
+}
+
 async function main() {
   const staticUrls = parseList('LINKEDIN_PROFILE_URLS');
   const intentKeywords = parseList('LINKEDIN_INTENT_KEYWORDS');
   const companyNewsKeywords = parseList('LINKEDIN_COMPANY_NEWS_KEYWORDS', DEFAULT_COMPANY_NEWS_KEYWORDS);
 
   const signalByUrl = new Map();
+  const discoveredKeys = new Set();
   const discoveredUrls = [];
 
   if (intentKeywords.length > 0) {
@@ -31,9 +36,13 @@ async function main() {
     const posts = await searchIntentPosts(intentKeywords);
     for (const post of posts) {
       discoveredUrls.push(post.profileUrl);
+      discoveredKeys.add(normalizeProfileKey(post.profileUrl));
       signalByUrl.set(post.profileUrl, {
         hasIntentSignal: true,
         matchedKeyword: post.matchedKeyword,
+        postText: post.postText,
+        postUrl: post.postUrl,
+        postedAtTimestamp: post.postedAtTimestamp,
       });
     }
     console.log(`Found ${discoveredUrls.length} candidate profile(s) from post search.`);
@@ -68,7 +77,26 @@ async function main() {
   }
 
   console.log(`Scraping ${newUrls.length} LinkedIn profile(s)...`);
-  const profiles = await scrapeProfiles(newUrls);
+  const scrapedProfiles = await scrapeProfiles(newUrls);
+
+  // India-only guardrail applies to search-discovered candidates; a manually
+  // configured LINKEDIN_PROFILE_URLS entry is an explicit ask and bypasses it.
+  const profiles = scrapedProfiles.filter((profile) => {
+    const isDiscovered = discoveredKeys.has(normalizeProfileKey(profile.profileUrl));
+    if (isDiscovered && !isIndianLocation(profile.location)) {
+      return false;
+    }
+    return true;
+  });
+  const discardedForLocation = scrapedProfiles.length - profiles.length;
+  if (discardedForLocation > 0) {
+    console.log(`Discarding ${discardedForLocation} discovered profile(s) outside India.`);
+  }
+
+  if (profiles.length === 0) {
+    console.log('No profiles remaining after location filtering.');
+    return;
+  }
 
   console.log('Checking for company-level news signals...');
   const companies = Array.from(new Set(profiles.map((p) => p.company).filter(Boolean)));

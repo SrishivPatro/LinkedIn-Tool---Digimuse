@@ -3,7 +3,12 @@ const path = require('path');
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 
-const SHEET_HEADERS = ['Name', 'Title', 'Company', 'Location', 'LinkedIn URL', 'Score', 'Signal', 'Scraped At'];
+const SHEET_HEADERS = [
+  'Name', 'Title', 'Company', 'Location', 'LinkedIn URL',
+  'Source Post', 'Post URL', "What's Needed",
+  'Agency Need Score', 'Urgency Score', 'Potential Score', 'Chances Score', 'Signal Level',
+  'Scraped At',
+];
 const SERVICE_ACCOUNT_KEY_PATH = path.join(__dirname, '..', 'credentials', 'google-service-account.json');
 const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
 
@@ -78,16 +83,28 @@ async function pushLeads(scoredLeads) {
   const doc = await openDoc();
   const sheet = await getOrCreateSheet(doc);
 
-  const rows = scoredLeads.map((lead) => ({
-    Name: lead.name,
-    Title: lead.title,
-    Company: lead.company,
-    Location: lead.location,
-    'LinkedIn URL': lead.profileUrl,
-    Score: lead.score,
-    Signal: lead.signalSummary || '',
-    'Scraped At': new Date().toISOString(),
-  }));
+  const rows = scoredLeads.map((lead) => {
+    const postExcerpt = lead.postText && lead.postText.length > 300
+      ? `${lead.postText.slice(0, 297)}...`
+      : (lead.postText || '');
+
+    return {
+      Name: lead.name,
+      Title: lead.title,
+      Company: lead.company,
+      Location: lead.location,
+      'LinkedIn URL': lead.profileUrl,
+      'Source Post': postExcerpt,
+      'Post URL': lead.postUrl || '',
+      "What's Needed": lead.needSummary || '',
+      'Agency Need Score': lead.agencyNeedScore,
+      'Urgency Score': lead.urgencyScore,
+      'Potential Score': lead.potentialScore,
+      'Chances Score': lead.chancesScore,
+      'Signal Level': lead.signalLevel,
+      'Scraped At': new Date().toISOString(),
+    };
+  });
 
   await sheet.addRows(rows);
   return rows.length;
