@@ -1,6 +1,10 @@
 const { ApifyClient } = require('apify-client');
 
 const DEFAULT_ACTOR_ID = 'apimaestro/linkedin-profile-detail';
+// UNVERIFIED: no confirmed actor exists yet for LinkedIn post/content search.
+// This id and input shape are a best guess pending a live validation run;
+// override with APIFY_LINKEDIN_SEARCH_ACTOR_ID once a working actor is confirmed.
+const DEFAULT_SEARCH_ACTOR_ID = 'apimaestro/linkedin-post-search-scraper';
 
 function extractUsername(profileUrl) {
   const match = String(profileUrl).match(/linkedin\.com\/in\/([^/?#]+)/i);
@@ -52,4 +56,71 @@ async function scrapeProfiles(profileUrls) {
   return profiles;
 }
 
-module.exports = { scrapeProfiles };
+function normalizePost(item) {
+  return {
+    postText: item.text || item.postText || item.content || item.commentary || '',
+    profileUrl: item.authorProfileUrl || item.profileUrl || item.authorUrl
+      || (item.author && item.author.profileUrl) || '',
+    authorName: item.authorName || (item.author && item.author.name) || '',
+    postUrl: item.postUrl || item.url || item.link || '',
+  };
+}
+
+async function runSearchActor(query) {
+  const client = new ApifyClient({ token: process.env.APIFY_TOKEN });
+  const actorId = process.env.APIFY_LINKEDIN_SEARCH_ACTOR_ID || DEFAULT_SEARCH_ACTOR_ID;
+
+  const run = await client.actor(actorId).call({ query, maxItems: 20 });
+  const { items } = await client.dataset(run.defaultDatasetId).listItems();
+
+  console.log(`[debug] Search actor "${actorId}" query "${query}" -> status: ${run.status}, items: ${items.length}`);
+  if (items.length > 0) {
+    console.log('[debug] Sample raw search item:', JSON.stringify(items[0], null, 2));
+  }
+
+  if (run.status !== 'SUCCEEDED') {
+    console.error(`Search actor run for "${query}" did not succeed (status: ${run.status})`);
+    return [];
+  }
+
+  return items.map(normalizePost).filter((post) => post.profileUrl);
+}
+
+async function searchIntentPosts(keywords) {
+  if (!process.env.APIFY_TOKEN) {
+    throw new Error('APIFY_TOKEN is not set in .env');
+  }
+  if (!keywords || keywords.length === 0) {
+    return [];
+  }
+
+  const results = [];
+  for (const keyword of keywords) {
+    const posts = await runSearchActor(keyword);
+    for (const post of posts) {
+      results.push({ ...post, matchedKeyword: keyword });
+    }
+  }
+  return results;
+}
+
+async function searchCompanyNews(companies, newsKeywords) {
+  if (!process.env.APIFY_TOKEN) {
+    throw new Error('APIFY_TOKEN is not set in .env');
+  }
+  if (!companies || companies.length === 0 || !newsKeywords || newsKeywords.length === 0) {
+    return new Map();
+  }
+
+  const signalByCompany = new Map();
+  for (const company of companies) {
+    const query = `${company} ${newsKeywords.join(' OR ')}`;
+    const posts = await runSearchActor(query);
+    if (posts.length > 0) {
+      signalByCompany.set(company, newsKeywords[0]);
+    }
+  }
+  return signalByCompany;
+}
+
+module.exports = { scrapeProfiles, searchIntentPosts, searchCompanyNews };

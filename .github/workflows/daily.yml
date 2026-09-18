@@ -3,7 +3,16 @@ name: Daily LinkedIn Pipeline
 on:
   schedule:
     - cron: '0 4 * * *' # 9:30am IST (UTC+5:30)
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      intent_keywords:
+        description: 'Comma-separated intent keywords for post search (overrides LINKEDIN_INTENT_KEYWORDS secret; for manual testing)'
+        required: false
+        default: ''
+      search_actor_id:
+        description: 'Override Apify actor id for LinkedIn post search (overrides APIFY_LINKEDIN_SEARCH_ACTOR_ID secret; for manual testing)'
+        required: false
+        default: ''
 
 jobs:
   run-pipeline:
@@ -23,7 +32,10 @@ jobs:
       - name: Run pipeline
         env:
           APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+          APIFY_LINKEDIN_SEARCH_ACTOR_ID: ${{ github.event.inputs.search_actor_id || secrets.APIFY_LINKEDIN_SEARCH_ACTOR_ID }}
           LINKEDIN_PROFILE_URLS: ${{ secrets.LINKEDIN_PROFILE_URLS }}
+          LINKEDIN_INTENT_KEYWORDS: ${{ github.event.inputs.intent_keywords || secrets.LINKEDIN_INTENT_KEYWORDS }}
+          LINKEDIN_COMPANY_NEWS_KEYWORDS: ${{ secrets.LINKEDIN_COMPANY_NEWS_KEYWORDS }}
           GOOGLE_SHEETS_SPREADSHEET_ID: ${{ secrets.GOOGLE_SHEETS_SPREADSHEET_ID }}
           GOOGLE_SHEETS_CLIENT_EMAIL: ${{ secrets.GOOGLE_SHEETS_CLIENT_EMAIL }}
           GOOGLE_SHEETS_PRIVATE_KEY: ${{ secrets.GOOGLE_SHEETS_PRIVATE_KEY }}
