@@ -73,10 +73,7 @@ async function runSearchActor(query) {
   const run = await client.actor(actorId).call({ search_input: query });
   const { items } = await client.dataset(run.defaultDatasetId).listItems();
 
-  console.log(`[debug] Search actor "${actorId}" query "${query}" -> status: ${run.status}, items: ${items.length}`);
-  if (items.length > 0) {
-    console.log('[debug] Sample raw search item:', JSON.stringify(items[0], null, 2));
-  }
+  console.log(`Search actor query "${query}" -> status: ${run.status}, posts found: ${items.length}`);
 
   if (run.status !== 'SUCCEEDED') {
     console.error(`Search actor run for "${query}" did not succeed (status: ${run.status})`);

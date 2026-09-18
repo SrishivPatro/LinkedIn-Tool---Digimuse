@@ -42,6 +42,10 @@ async function getOrCreateSheet(doc) {
 
   try {
     await sheet.loadHeaderRow();
+    const missingHeaders = SHEET_HEADERS.some((header) => !sheet.headerValues.includes(header));
+    if (missingHeaders) {
+      await sheet.setHeaderRow(SHEET_HEADERS);
+    }
   } catch {
     await sheet.setHeaderRow(SHEET_HEADERS);
   }
