@@ -50,7 +50,14 @@ async function scrapeProfiles(profileUrls) {
       continue;
     }
 
-    profiles.push(...items.map(normalizeProfile));
+    for (const item of items) {
+      const profile = normalizeProfile(item);
+      if (!profile.name && !profile.profileUrl) {
+        console.error(`Apify run for "${username}" returned an empty profile, skipping`);
+        continue;
+      }
+      profiles.push({ ...profile, requestedUrl: url });
+    }
   }
 
   return profiles;

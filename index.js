@@ -27,7 +27,7 @@ async function main() {
   const intentKeywords = parseList('LINKEDIN_INTENT_KEYWORDS');
   const companyNewsKeywords = parseList('LINKEDIN_COMPANY_NEWS_KEYWORDS', DEFAULT_COMPANY_NEWS_KEYWORDS);
 
-  const signalByUrl = new Map();
+  const signalByKey = new Map();
   const discoveredKeys = new Set();
   const discoveredUrls = [];
 
@@ -35,9 +35,10 @@ async function main() {
     console.log(`Searching LinkedIn posts for ${intentKeywords.length} intent keyword(s)...`);
     const posts = await searchIntentPosts(intentKeywords);
     for (const post of posts) {
+      const key = normalizeProfileKey(post.profileUrl);
       discoveredUrls.push(post.profileUrl);
-      discoveredKeys.add(normalizeProfileKey(post.profileUrl));
-      signalByUrl.set(post.profileUrl, {
+      discoveredKeys.add(key);
+      signalByKey.set(key, {
         hasIntentSignal: true,
         matchedKeyword: post.matchedKeyword,
         postText: post.postText,
@@ -81,8 +82,10 @@ async function main() {
 
   // India-only guardrail applies to search-discovered candidates; a manually
   // configured LINKEDIN_PROFILE_URLS entry is an explicit ask and bypasses it.
+  // Keyed off requestedUrl (what we asked scrapeProfiles for), never off the
+  // actor's own returned profileUrl, which comes back empty on a failed scrape.
   const profiles = scrapedProfiles.filter((profile) => {
-    const isDiscovered = discoveredKeys.has(normalizeProfileKey(profile.profileUrl));
+    const isDiscovered = discoveredKeys.has(normalizeProfileKey(profile.requestedUrl));
     if (isDiscovered && !isIndianLocation(profile.location)) {
       return false;
     }
@@ -103,7 +106,7 @@ async function main() {
   const companyNewsByCompany = await searchCompanyNews(companies, companyNewsKeywords);
 
   const profilesWithSignals = profiles.map((profile) => {
-    const intentSignal = signalByUrl.get(profile.profileUrl) || {};
+    const intentSignal = signalByKey.get(normalizeProfileKey(profile.requestedUrl)) || {};
     const matchedCompanyNewsKeyword = companyNewsByCompany.get(profile.company);
     return {
       ...profile,
