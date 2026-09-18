@@ -1,0 +1,53 @@
+name: Debug Search Actor Schema
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test location/country input fields on search actor
+        env:
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+        run: |
+          node -e "
+          const { ApifyClient } = require('apify-client');
+          (async () => {
+            const client = new ApifyClient({ token: process.env.APIFY_TOKEN });
+            const actorId = 'apimaestro/linkedin-posts-search-scraper-no-cookies';
+
+            console.log('--- Test A: baseline (no location field) ---');
+            const runA = await client.actor(actorId).call({ search_input: 'looking for an agency', limit: 5 });
+            console.log('Run A status:', runA.status);
+            const dataA = await client.dataset(runA.defaultDatasetId).listItems();
+            console.log('Run A item count:', dataA.items.length);
+
+            console.log('--- Test B: with location/country/countryCode/geo guesses ---');
+            const runB = await client.actor(actorId).call({
+              search_input: 'looking for an agency',
+              location: 'India',
+              country: 'India',
+              countryCode: 'IN',
+              geo: 'India',
+              limit: 5,
+            });
+            console.log('Run B status:', runB.status);
+            const dataB = await client.dataset(runB.defaultDatasetId).listItems();
+            console.log('Run B item count:', dataB.items.length);
+            if (dataB.items.length > 0) {
+              console.log('Run B first item (full):', JSON.stringify(dataB.items[0], null, 2));
+            }
+          })().catch((e) => { console.error('FAILED:', e.message); process.exit(1); });
+          "
