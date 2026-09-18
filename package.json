@@ -1,0 +1,23 @@
+{
+  "name": "linkedin-tool-digimuse",
+  "version": "1.0.0",
+  "description": "LinkedIn scraping, enrichment, scoring, and Google Sheets pipeline",
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "linkedin",
+    "scraper",
+    "enrichment",
+    "scoring",
+    "sheets"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^16.4.5"
+  }
+}
