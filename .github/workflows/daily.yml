@@ -13,6 +13,10 @@ on:
         description: 'Override Apify actor id for LinkedIn post search (overrides APIFY_LINKEDIN_SEARCH_ACTOR_ID secret; for manual testing)'
         required: false
         default: ''
+      date_filter:
+        description: 'Override post freshness filter: "", past-1h, past-24h, past-week, past-month (overrides LINKEDIN_POST_DATE_FILTER secret; for manual testing)'
+        required: false
+        default: ''
 
 jobs:
   run-pipeline:
@@ -33,6 +37,7 @@ jobs:
         env:
           APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
           APIFY_LINKEDIN_SEARCH_ACTOR_ID: ${{ github.event.inputs.search_actor_id || secrets.APIFY_LINKEDIN_SEARCH_ACTOR_ID }}
+          LINKEDIN_POST_DATE_FILTER: ${{ github.event.inputs.date_filter || secrets.LINKEDIN_POST_DATE_FILTER }}
           LINKEDIN_PROFILE_URLS: ${{ secrets.LINKEDIN_PROFILE_URLS }}
           LINKEDIN_INTENT_KEYWORDS: ${{ github.event.inputs.intent_keywords || secrets.LINKEDIN_INTENT_KEYWORDS }}
           LINKEDIN_COMPANY_NEWS_KEYWORDS: ${{ secrets.LINKEDIN_COMPANY_NEWS_KEYWORDS }}

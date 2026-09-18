@@ -5,6 +5,11 @@ const DEFAULT_ACTOR_ID = 'apimaestro/linkedin-profile-detail';
 // actor), but its exact input/output schema hasn't been confirmed by a live
 // run yet. Override with APIFY_LINKEDIN_SEARCH_ACTOR_ID if it turns out wrong.
 const DEFAULT_SEARCH_ACTOR_ID = 'apimaestro/linkedin-posts-search-scraper-no-cookies';
+// Confirmed live via the actor's own validation error -- this is the complete,
+// exact set it accepts. There is no "past two weeks" option; "past-week" is
+// the closest fit to a freshness requirement stricter than a month.
+const VALID_DATE_FILTERS = ['', 'past-1h', 'past-24h', 'past-week', 'past-month'];
+const DEFAULT_DATE_FILTER = 'past-week';
 
 function extractUsername(profileUrl) {
   const match = String(profileUrl).match(/linkedin\.com\/in\/([^/?#]+)/i);
@@ -75,14 +80,25 @@ function normalizePost(item) {
   };
 }
 
+function resolveDateFilter() {
+  const configured = process.env.LINKEDIN_POST_DATE_FILTER;
+  if (configured === undefined || configured === '') return DEFAULT_DATE_FILTER;
+  if (!VALID_DATE_FILTERS.includes(configured)) {
+    console.error(`Invalid LINKEDIN_POST_DATE_FILTER "${configured}", falling back to "${DEFAULT_DATE_FILTER}". Valid values: ${VALID_DATE_FILTERS.filter(Boolean).join(', ')}`);
+    return DEFAULT_DATE_FILTER;
+  }
+  return configured;
+}
+
 async function runSearchActor(query) {
   const client = new ApifyClient({ token: process.env.APIFY_TOKEN });
   const actorId = process.env.APIFY_LINKEDIN_SEARCH_ACTOR_ID || DEFAULT_SEARCH_ACTOR_ID;
+  const dateFilter = resolveDateFilter();
 
-  const run = await client.actor(actorId).call({ search_input: query });
+  const run = await client.actor(actorId).call({ search_input: query, date_filter: dateFilter });
   const { items } = await client.dataset(run.defaultDatasetId).listItems();
 
-  console.log(`Search actor query "${query}" -> status: ${run.status}, posts found: ${items.length}`);
+  console.log(`Search actor query "${query}" (date_filter: "${dateFilter}") -> status: ${run.status}, posts found: ${items.length}`);
 
   if (run.status !== 'SUCCEEDED') {
     console.error(`Search actor run for "${query}" did not succeed (status: ${run.status})`);
