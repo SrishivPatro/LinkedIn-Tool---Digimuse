@@ -1,0 +1,60 @@
+name: Debug Search Actor Date Filter
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test date_filter values on search actor
+        env:
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+        run: |
+          node -e "
+          const { ApifyClient } = require('apify-client');
+          (async () => {
+            const client = new ApifyClient({ token: process.env.APIFY_TOKEN });
+            const actorId = 'apimaestro/linkedin-posts-search-scraper-no-cookies';
+            const query = 'looking for an agency';
+
+            console.log('--- Baseline: no date_filter ---');
+            const runA = await client.actor(actorId).call({ search_input: query, limit: 5 });
+            const dataA = await client.dataset(runA.defaultDatasetId).listItems();
+            console.log('Run A total_count (from item metadata):', dataA.items[0] && dataA.items[0].metadata && dataA.items[0].metadata.total_count);
+            console.log('Run A first item posted_at:', dataA.items[0] && JSON.stringify(dataA.items[0].posted_at));
+
+            console.log('--- Test: date_filter=week ---');
+            const runB = await client.actor(actorId).call({ search_input: query, date_filter: 'week', limit: 5 });
+            const dataB = await client.dataset(runB.defaultDatasetId).listItems();
+            console.log('Run B total_count:', dataB.items[0] && dataB.items[0].metadata && dataB.items[0].metadata.total_count);
+            console.log('Run B first item posted_at:', dataB.items[0] && JSON.stringify(dataB.items[0].posted_at));
+            console.log('Run B all posted_at dates:', dataB.items.map((i) => i.posted_at && i.posted_at.date));
+
+            console.log('--- Test: date_filter=month (for comparison) ---');
+            const runC = await client.actor(actorId).call({ search_input: query, date_filter: 'month', limit: 5 });
+            const dataC = await client.dataset(runC.defaultDatasetId).listItems();
+            console.log('Run C total_count:', dataC.items[0] && dataC.items[0].metadata && dataC.items[0].metadata.total_count);
+            console.log('Run C all posted_at dates:', dataC.items.map((i) => i.posted_at && i.posted_at.date));
+
+            console.log('--- Test: date_filter=bogus-value (check for validation error / fallback behavior) ---');
+            try {
+              const runD = await client.actor(actorId).call({ search_input: query, date_filter: 'not-a-real-value', limit: 3 });
+              const dataD = await client.dataset(runD.defaultDatasetId).listItems();
+              console.log('Run D status:', runD.status, 'total_count:', dataD.items[0] && dataD.items[0].metadata && dataD.items[0].metadata.total_count);
+            } catch (e) {
+              console.log('Run D threw:', e.message);
+            }
+          })().catch((e) => { console.error('FAILED:', e.message); process.exit(1); });
+          "
