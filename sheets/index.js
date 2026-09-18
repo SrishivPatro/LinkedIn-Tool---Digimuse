@@ -1,13 +1,26 @@
+const fs = require('fs');
+const path = require('path');
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 
 const SHEET_HEADERS = ['Name', 'Title', 'Company', 'Location', 'LinkedIn URL', 'Score', 'Scraped At'];
+const SERVICE_ACCOUNT_KEY_PATH = path.join(__dirname, '..', 'credentials', 'google-service-account.json');
+const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
 
 function getAuth() {
+  if (fs.existsSync(SERVICE_ACCOUNT_KEY_PATH)) {
+    const key = JSON.parse(fs.readFileSync(SERVICE_ACCOUNT_KEY_PATH, 'utf8'));
+    return new JWT({
+      email: key.client_email,
+      key: key.private_key,
+      scopes: SCOPES,
+    });
+  }
+
   return new JWT({
     email: process.env.GOOGLE_SHEETS_CLIENT_EMAIL,
     key: (process.env.GOOGLE_SHEETS_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
-    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+    scopes: SCOPES,
   });
 }
 
