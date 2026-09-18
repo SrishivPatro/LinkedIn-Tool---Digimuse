@@ -97,7 +97,9 @@ async function main() {
   }
 
   if (profiles.length === 0) {
-    console.log('No profiles remaining after location filtering.');
+    console.log(scrapedProfiles.length === 0
+      ? 'No profiles were successfully scraped this run.'
+      : 'No profiles remaining after location filtering.');
     return;
   }
 
