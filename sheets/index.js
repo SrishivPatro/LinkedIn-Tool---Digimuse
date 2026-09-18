@@ -38,8 +38,12 @@ async function pushLeads(scoredLeads) {
   let sheet = doc.sheetsByIndex[0];
   if (!sheet) {
     sheet = await doc.addSheet({ headerValues: SHEET_HEADERS });
-  } else if (sheet.headerValues.length === 0) {
-    await sheet.setHeaderRow(SHEET_HEADERS);
+  } else {
+    try {
+      await sheet.loadHeaderRow();
+    } catch {
+      await sheet.setHeaderRow(SHEET_HEADERS);
+    }
   }
 
   const rows = scoredLeads.map((lead) => ({
